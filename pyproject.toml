@@ -1,0 +1,127 @@
+[build-system]
+requires = ["hatchling", "hatch-requirements-txt"]
+build-backend = "hatchling.build"
+
+[project]
+name = "amazon-braket-examples"
+version = "0.0.1"
+description = 'Example notebooks that show how to apply quantum computing with Amazon Braket.'
+readme = "README.md"
+requires-python = ">=3.11"
+license = "apache-2.0"
+keywords = []
+authors = [{name = "Amazon Web Services"},]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Education",
+  "Intended Audience :: Science/Research",
+  "Natural Language :: English",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+dynamic = ["dependencies"]
+
+[tool.hatch.metadata.hooks.requirements_txt]
+files = ["requirements.txt"]
+
+[tool.hatch.build.targets.wheel]
+only-packages = true
+include = [
+  "examples/*",
+]
+
+[project.urls]
+Documentation = "https://github.com/amazon-braket/amazon-braket-examples#readme"
+Issues = "https://github.com/amazon-braket/amazon-braket-examples/issues"
+Source = "https://github.com/amazon-braket/amazon-braket-examples"
+
+[tool.hatch.envs.default]
+dependencies = [
+  "jupyter",
+  "nbconvert",
+  "pytest",
+  "pytest-rerunfailures",
+  "pytest-xdist[psutil]",
+  "testbook",
+]
+
+[tool.hatch.envs.default.scripts]
+test = """
+python -m ipykernel install --user --name "conda_braket" --display-name "conda_braket"
+pytest -ra -v --durations=0 test/repo_tests/
+pytest --dist worksteal -n logical -ra -v --durations=0 test/integ_tests/
+"""
+
+[tool.hatch.envs.lint]
+detached = true
+dependencies = [
+  "ruff",
+]
+
+[tool.hatch.envs.lint.scripts]
+style = [
+  "ruff check {args:.}",
+]
+fmt = [
+  "ruff format {args:.}",
+  "style",
+]
+
+[[tool.hatch.envs.all.matrix]]
+python = ["3.11", "3.12", "3.13"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+lint.isort = { known-first-party = [
+  "braket",
+] }
+lint.extend-select = ["I", "PERF", "UP", "SIM"]
+lint.preview = false #TODO: address lint, potentially set to true
+lint.ignore = ["E722","F821", "UP015", "SIM115"]
+lint.per-file-ignores."test/**/*.py" = [
+  "D",       # don't care about documentation in tests
+  "FBT",     # don"t care about booleans as positional arguments in tests
+  "INP001",  # no implicit namespace
+  "PLR2004", # Magic value used in comparison, consider replacing with a constant variable
+  "S101",    # asserts allowed in tests...
+  "S603",    # `subprocess` call: check for execution of untrusted input
+]
+
+[tool.hatch.envs.test-mitiq]
+detached = true
+dependencies = [
+  "jupyter",
+  "nbconvert",
+  "pytest",
+  "pytest-rerunfailures",
+  "pytest-xdist[psutil]",
+  "testbook",
+]
+
+
+[tool.hatch.envs.test-mitiq.scripts]
+test = """
+pip install -r extra/requirements-mitiq.txt --force-reinstall
+python -m ipykernel install --user --name "conda_braket" --display-name "conda_braket"
+pytest --dist worksteal -n logical -ra -v --durations=0 --test-mitiq test/integ_tests/error_mitigation/ {args}
+"""
+
+# TODO: combine installs to single line; numpy version clash until mitiq updates to >=2.x
+test-dry-run= """ 
+pip install -r requirements.txt --force-reinstall
+pip install -r extra/requirements-mitiq.txt --dry-run
+"""
+ 
+[tool.pytest.ini_options]
+markers = [
+    "mitiq: tests that require mitiq",
+]

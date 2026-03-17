@@ -1,0 +1,49 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Python package
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+      - feature/**
+
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+    - name: Check disk space
+      run: df -h .
+    - uses: actions/checkout@v6
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install hatch
+    - name: Install BLAS/LAPACK libraries on Ubuntu
+      if: ${{ runner.os == 'Linux' }}
+      run: sudo apt-get update && sudo apt-get install -y libopenblas-dev liblapack-dev
+    - name: Run integ tests
+      run: |
+        hatch run test -p no:cacheprovider
+    - name: Run optional tests
+      if: ${{ matrix.python-version != '3.10' && matrix.python-version != '3.13' }}
+      run: |
+        hatch run test-mitiq:test
